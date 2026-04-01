@@ -1,51 +1,76 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Snake Game</title>
+    <title>Cobrinha2000</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <main class="app">
-      <header class="topbar">
-        <h1>Snake</h1>
-        <p class="score">Pontuação: <span id="score">0</span></p>
-      </header>
+    <div class="page-layout">
+      <main class="app" id="appRoot">
+        <header class="topbar">
+          <h1>Cobrinha2000</h1>
+          <p class="score">
+            Pontuação: <span id="score">0</span> | Recorde:
+            <span id="highScore">0</span>
+          </p>
+        </header>
 
-      <section class="game-shell">
-        <canvas
-          id="gameCanvas"
-          width="400"
-          height="400"
-          aria-label="Área de jogo da cobrinha"
-        ></canvas>
+        <section class="game-shell" id="gameShell">
+          <canvas
+            id="gameCanvas"
+            width="400"
+            height="400"
+            aria-label="Área de jogo da cobrinha"
+          ></canvas>
+          <div class="fx-layer" id="fxLayer" aria-hidden="true"></div>
 
-        <div class="overlay" id="menuOverlay">
-          <div class="card">
-            <h2>Jogo da Cobrinha</h2>
-            <p>Use as setas do teclado para jogar.</p>
-            <button id="startButton" class="action">Começar</button>
+          <div class="overlay" id="menuOverlay">
+            <div class="card">
+              <h2>Jogo da Cobrinha</h2>
+              <p>Use as setas do teclado para jogar.</p>
+              <p>Segure "SHIFT" para correr.</p>
+              <p>Aperte "ESC" para pausar o jogo.</p>
+              <button id="startButton" class="action">Começar</button>
+            </div>
           </div>
-        </div>
 
-        <div class="overlay hidden" id="gameOverOverlay">
-          <div class="card">
-            <h2>Fim de jogo</h2>
-            <p>Pontuação final: <strong id="finalScore">0</strong></p>
-            <button id="restartButton" class="action">Jogar novamente</button>
+          <div class="overlay hidden" id="gameOverOverlay">
+            <div class="card">
+              <h2>Fim de jogo</h2>
+              <p>Sua pontuação: <strong id="finalScore">0</strong></p>
+              <button id="restartButton" class="action">Jogar novamente</button>
+            </div>
           </div>
-        </div>
 
-        <div class="overlay hidden" id="pauseOverlay">
-          <div class="card">
-            <h2>-Pausado-</h2>
-            <p>Pressione ESC para continuar.</p>
+          <div class="overlay hidden" id="newRecordOverlay">
+            <div class="card">
+              <h2>NOVO RECORDE!</h2>
+              <p>Parabéns! Seu recorde foi atualizado.</p>
+              <p>Pontuação: <strong id="newRecordScore">0</strong></p>
+              <button id="newRecordRestartButton" class="action">
+                Jogar novamente
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
-    </main>
 
+          <div class="overlay hidden" id="pauseOverlay">
+            <div class="card">
+              <h2>-Pausado-</h2>
+              <p>Pressione "ESC" para continuar.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer-copy">
+        <p>
+          &copy; <span id="footerYear">2026</span> - Cobrinha2000. Todos os
+          direitos reservados.
+        </p>
+      </footer>
+    </div>
     <script src="./script.js"></script>
   </body>
 </html>

@@ -38,28 +38,161 @@ function getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
 
 const canvas: HTMLCanvasElement = getGameCanvas();
 const ctx: CanvasRenderingContext2D = getCanvasContext(canvas);
+const appRoot = getRequiredElement<HTMLElement>("appRoot");
+const gameShell = getRequiredElement<HTMLElement>("gameShell");
+const fxLayer = getRequiredElement<HTMLElement>("fxLayer");
 const scoreElement = getRequiredElement<HTMLSpanElement>("score");
+const highScoreElement = getRequiredElement<HTMLSpanElement>("highScore");
 const finalScoreElement = getRequiredElement<HTMLElement>("finalScore");
+const newRecordScoreElement = getRequiredElement<HTMLElement>("newRecordScore");
+const footerYearElement = getRequiredElement<HTMLElement>("footerYear");
 const menuOverlay = getRequiredElement<HTMLElement>("menuOverlay");
 const gameOverOverlay = getRequiredElement<HTMLElement>("gameOverOverlay");
+const newRecordOverlay = getRequiredElement<HTMLElement>("newRecordOverlay");
 const pauseOverlay = getRequiredElement<HTMLElement>("pauseOverlay");
 const startButton = getRequiredElement<HTMLButtonElement>("startButton");
 const restartButton = getRequiredElement<HTMLButtonElement>("restartButton");
+const newRecordRestartButton = getRequiredElement<HTMLButtonElement>(
+  "newRecordRestartButton",
+);
 
 const tileSize: number = 20;
 const tileCount: number = canvas.width / tileSize;
-const initialSpeedMs: number = 130;
-const minSpeedMs: number = 70;
+const normalSpeedMs: number = 130;
+const sprintSpeedMs: number = 70;
+const highScoreStorageKey = "snake_high_score";
 
 let snake: GridPoint[] = [];
 let direction: GridPoint = { x: 1, y: 0 };
 let pendingDirection: GridPoint = { x: 1, y: 0 };
 let food: GridPoint = { x: 0, y: 0 };
 let score: number = 0;
+let highScore: number = 0;
+let highScoreAtRunStart: number = 0;
+let brokeRecordThisRun: boolean = false;
 let gameRunning: boolean = false;
 let isPaused: boolean = false;
+let isSprinting: boolean = false;
 let gameLoopId: number | null = null;
-let currentSpeed: number = initialSpeedMs;
+let currentSpeed: number = normalSpeedMs;
+let eatPopTimeoutId: number | null = null;
+let loseShakeTimeoutId: number | null = null;
+
+/**
+ * Le o recorde salvo no localStorage e retorna 0 quando nao houver valor valido.
+ */
+function loadHighScore(): number {
+  try {
+    const stored = window.localStorage.getItem(highScoreStorageKey);
+    if (!stored) return 0;
+
+    const parsed = Number(stored);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    return Math.floor(parsed);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Salva o recorde atual no localStorage.
+ */
+function persistHighScore(): void {
+  try {
+    window.localStorage.setItem(highScoreStorageKey, String(highScore));
+  } catch {
+    // Ignora erros de armazenamento (modo privado/bloqueio).
+  }
+}
+
+/**
+ * Atualiza o texto do recorde na interface.
+ */
+function updateHighScoreDisplay(): void {
+  highScoreElement.textContent = String(highScore);
+}
+
+/**
+ * Preenche o ano atual no footer, substituindo o valor fixo do HTML.
+ */
+function updateFooterYear(): void {
+  footerYearElement.textContent = String(new Date().getFullYear());
+}
+
+/**
+ * Atualiza e persiste o recorde quando a pontuacao atual o supera.
+ */
+function syncHighScore(): void {
+  if (score <= highScore) return;
+
+  if (score > highScoreAtRunStart) {
+    brokeRecordThisRun = true;
+  }
+
+  highScore = score;
+  persistHighScore();
+  updateHighScoreDisplay();
+}
+
+/**
+ * Dispara os efeitos visuais quando a comida e coletada.
+ */
+function triggerFoodPickupEffect(point: GridPoint): void {
+  const canvasRect = canvas.getBoundingClientRect();
+  const scaleX = canvasRect.width / canvas.width;
+  const scaleY = canvasRect.height / canvas.height;
+  const posX = (point.x * tileSize + tileSize / 2) * scaleX;
+  const posY = (point.y * tileSize + tileSize / 2) * scaleY;
+
+  const ring = document.createElement("span");
+  ring.className = "food-ring";
+  ring.style.left = `${posX}px`;
+  ring.style.top = `${posY}px`;
+  fxLayer.appendChild(ring);
+
+  for (let i = 1; i <= 8; i += 1) {
+    const spark = document.createElement("span");
+    spark.className = "food-spark";
+    spark.dataset.dir = String(i);
+    spark.style.left = `${posX}px`;
+    spark.style.top = `${posY}px`;
+    fxLayer.appendChild(spark);
+    window.setTimeout(() => spark.remove(), 450);
+  }
+
+  window.setTimeout(() => ring.remove(), 460);
+
+  gameShell.classList.remove("eat-pop");
+  void gameShell.offsetWidth;
+  gameShell.classList.add("eat-pop");
+
+  if (eatPopTimeoutId !== null) {
+    window.clearTimeout(eatPopTimeoutId);
+  }
+
+  eatPopTimeoutId = window.setTimeout(() => {
+    gameShell.classList.remove("eat-pop");
+    eatPopTimeoutId = null;
+  }, 250);
+}
+
+/**
+ * Dispara uma leve tremida da tela quando o jogador perde a partida.
+ */
+function triggerGameOverShake(): void {
+  appRoot.classList.remove("lose-shake");
+  void appRoot.offsetWidth;
+  appRoot.classList.add("lose-shake");
+
+  if (loseShakeTimeoutId !== null) {
+    window.clearTimeout(loseShakeTimeoutId);
+  }
+
+  loseShakeTimeoutId = window.setTimeout(() => {
+    appRoot.classList.remove("lose-shake");
+    loseShakeTimeoutId = null;
+  }, 500);
+}
 
 /**
  * Restaura o estado inicial da partida: cobra, direcao, placar e alimento.
@@ -74,7 +207,8 @@ function resetState(): void {
   direction = { x: 1, y: 0 };
   pendingDirection = { x: 1, y: 0 };
   score = 0;
-  currentSpeed = initialSpeedMs;
+  isSprinting = false;
+  currentSpeed = normalSpeedMs;
   updateScore();
   spawnFood();
   draw();
@@ -98,7 +232,9 @@ function spawnFood(): void {
       x: Math.floor(Math.random() * tileCount),
       y: Math.floor(Math.random() * tileCount),
     };
-  } while (snake.some((part) => part.x === nextFood.x && part.y === nextFood.y));
+  } while (
+    snake.some((part) => part.x === nextFood.x && part.y === nextFood.y)
+  );
 
   food = nextFood;
 }
@@ -138,7 +274,7 @@ function drawFood(): void {
     food.y * tileSize + tileSize / 2,
     tileSize * 0.36,
     0,
-    Math.PI * 2
+    Math.PI * 2,
   );
   ctx.fill();
 }
@@ -154,7 +290,7 @@ function drawSnake(): void {
       segment.x * tileSize + 1,
       segment.y * tileSize + 1,
       tileSize - 2,
-      tileSize - 2
+      tileSize - 2,
     );
   });
 }
@@ -182,24 +318,35 @@ function isOutOfBounds(part: GridPoint): boolean {
 function gameOver(): void {
   gameRunning = false;
   isPaused = false;
+  isSprinting = false;
+  currentSpeed = normalSpeedMs;
   if (gameLoopId !== null) {
     window.clearInterval(gameLoopId);
     gameLoopId = null;
   }
 
+  triggerGameOverShake();
   pauseOverlay.classList.add("hidden");
   finalScoreElement.textContent = String(score);
+
+  if (brokeRecordThisRun) {
+    newRecordScoreElement.textContent = String(score);
+    newRecordOverlay.classList.remove("hidden");
+    gameOverOverlay.classList.add("hidden");
+    return;
+  }
+
+  newRecordOverlay.classList.add("hidden");
   gameOverOverlay.classList.remove("hidden");
 }
 
 /**
- * Aumenta gradualmente a velocidade da cobra conforme a pontuacao cresce.
+ * Reinicia o loop principal respeitando a velocidade atual (normal ou sprint).
  */
-function speedUpIfNeeded(): void {
-  const nextSpeed = Math.max(minSpeedMs, initialSpeedMs - score * 2);
-  if (nextSpeed === currentSpeed) return;
+function restartGameLoop(): void {
+  if (!gameRunning || isPaused) return;
 
-  currentSpeed = nextSpeed;
+  currentSpeed = isSprinting ? sprintSpeedMs : normalSpeedMs;
   if (gameLoopId !== null) {
     window.clearInterval(gameLoopId);
   }
@@ -212,7 +359,10 @@ function speedUpIfNeeded(): void {
 function tick(): void {
   direction = pendingDirection;
   const head = snake[0];
-  const newHead: GridPoint = { x: head.x + direction.x, y: head.y + direction.y };
+  const newHead: GridPoint = {
+    x: head.x + direction.x,
+    y: head.y + direction.y,
+  };
   const willGrow = newHead.x === food.x && newHead.y === food.y;
   const collisionBody: GridPoint[] = willGrow ? snake : snake.slice(0, -1);
 
@@ -229,8 +379,9 @@ function tick(): void {
   if (willGrow) {
     score += 1;
     updateScore();
+    syncHighScore();
+    triggerFoodPickupEffect(newHead);
     spawnFood();
-    speedUpIfNeeded();
   } else {
     snake.pop();
   }
@@ -242,17 +393,19 @@ function tick(): void {
  * Inicia uma nova partida, escondendo menus e iniciando o loop principal.
  */
 function startGame(): void {
+  highScoreAtRunStart = highScore;
+  brokeRecordThisRun = false;
   resetState();
   menuOverlay.classList.add("hidden");
   gameOverOverlay.classList.add("hidden");
+  newRecordOverlay.classList.add("hidden");
   pauseOverlay.classList.add("hidden");
   gameRunning = true;
   isPaused = false;
+  isSprinting = false;
+  currentSpeed = normalSpeedMs;
 
-  if (gameLoopId !== null) {
-    window.clearInterval(gameLoopId);
-  }
-  gameLoopId = window.setInterval(tick, currentSpeed);
+  restartGameLoop();
 }
 
 /**
@@ -276,7 +429,7 @@ function togglePause(): void {
   if (isPaused) {
     isPaused = false;
     pauseOverlay.classList.add("hidden");
-    gameLoopId = window.setInterval(tick, currentSpeed);
+    restartGameLoop();
     return;
   }
 
@@ -289,12 +442,56 @@ function togglePause(): void {
 }
 
 /**
+ * Ativa ou desativa o sprint da cobra quando SHIFT e pressionado/solto.
+ */
+function setSprintState(enabled: boolean): void {
+  if (isSprinting === enabled) return;
+  isSprinting = enabled;
+
+  if (!gameRunning || isPaused) return;
+  restartGameLoop();
+}
+
+/**
+ * Inicia/reinicia a partida com ESPACO quando uma tela de inicio/fim estiver ativa.
+ */
+function handleSpaceStart(event: KeyboardEvent): boolean {
+  const isSpaceKey =
+    event.code === "Space" || event.key === " " || event.key === "Spacebar";
+  if (!isSpaceKey) return false;
+  if (event.repeat) return true;
+  if (gameRunning) return true;
+
+  const canStartFromOverlay =
+    !menuOverlay.classList.contains("hidden") ||
+    !gameOverOverlay.classList.contains("hidden") ||
+    !newRecordOverlay.classList.contains("hidden");
+
+  if (canStartFromOverlay) {
+    event.preventDefault();
+    startGame();
+  }
+
+  return true;
+}
+
+/**
  * Trata o evento de teclado e converte setas em mudancas de direcao.
  */
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key === "Escape") {
     event.preventDefault();
     togglePause();
+    return;
+  }
+
+  if (handleSpaceStart(event)) {
+    return;
+  }
+
+  if (event.key === "Shift") {
+    event.preventDefault();
+    setSprintState(true);
     return;
   }
 
@@ -320,8 +517,23 @@ function handleKeydown(event: KeyboardEvent): void {
   }
 }
 
+/**
+ * Trata soltura de teclas para desligar o sprint quando SHIFT e liberado.
+ */
+function handleKeyup(event: KeyboardEvent): void {
+  if (event.key !== "Shift") return;
+
+  event.preventDefault();
+  setSprintState(false);
+}
+
 document.addEventListener("keydown", handleKeydown);
+document.addEventListener("keyup", handleKeyup);
 startButton.addEventListener("click", startGame);
 restartButton.addEventListener("click", startGame);
+newRecordRestartButton.addEventListener("click", startGame);
 
+highScore = loadHighScore();
+updateHighScoreDisplay();
+updateFooterYear();
 resetState();
