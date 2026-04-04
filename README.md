@@ -5,7 +5,8 @@ Projeto web do clássico jogo da cobrinha (Snake), com visual moderno, comandos 
 ## Descrição
 
 O **Cobrinha2000** foi desenvolvido para recriar o jogo da cobrinha no navegador com uma interface clara e acessível.
-Feito
+Feito para o projeto final do curso Geração Tech: IA Generativa + Soft Skills.
+
 O jogador controla a cobrinha pelas setas do teclado, coleta comida para crescer e tenta sobreviver o máximo possível sem bater nas paredes ou no próprio corpo.
 
 Além do modo tradicional, o projeto inclui recursos extras para deixar a jogabilidade mais dinâmica, como sprint, pausa, efeitos visuais e salvamento de recorde no navegador.
