@@ -5,6 +5,7 @@ Projeto web do clássico jogo da cobrinha (Snake), com visual moderno, comandos 
 ## Descrição
 
 O **Cobrinha2000** foi desenvolvido para recriar o jogo da cobrinha no navegador com uma interface clara e acessível.
+Feito
 O jogador controla a cobrinha pelas setas do teclado, coleta comida para crescer e tenta sobreviver o máximo possível sem bater nas paredes ou no próprio corpo.
 
 Além do modo tradicional, o projeto inclui recursos extras para deixar a jogabilidade mais dinâmica, como sprint, pausa, efeitos visuais e salvamento de recorde no navegador.
@@ -16,19 +17,23 @@ Além do modo tradicional, o projeto inclui recursos extras para deixar a jogabi
 - Organizar o código em arquivos separados (estrutura, estilo e lógica).
 - Aplicar melhorias de experiência do usuário com feedback visual e persistência de dados.
 
+## Controles
+
+- Usa-se as setas do teclado para controlar a cobrinha
+- Apertar a Barra de espaço começa e reinicia o jogo
+- Segure o SHIFT para correr
+- Aperte o ESC para pausar o jogo
+
 ## Funcionalidades
 
 - Menu inicial com botão **Começar**.
-- Controle da cobrinha com as **setas do teclado**.
+- Controle da cobrinha com as **teclas do teclado** funcionais.
 - Coleta de comida em posições aleatórias.
 - Crescimento da cobrinha ao comer.
 - Fim de jogo ao colidir com parede ou com o próprio corpo.
 - Sistema de **pontuação atual**.
 - Sistema de **recorde (high score)** salvo em `localStorage`.
 - Tela especial de **NOVO RECORDE!** quando o recorde é superado.
-- **Pausa com ESC** (pressione novamente para continuar).
-- **Sprint com SHIFT** enquanto a tecla estiver pressionada.
-- **Barra de espaço** para iniciar e reiniciar o jogo.
 - Efeitos visuais ao coletar comida (partículas e pulso).
 - Efeito de tremor curto ao perder.
 - Footer com **ano atual dinâmico**.
@@ -38,7 +43,6 @@ Além do modo tradicional, o projeto inclui recursos extras para deixar a jogabi
 - **HTML5** para estrutura da interface.
 - **CSS3** para layout, estilo e animações.
 - **JavaScript (ES6+)** para execução no navegador.
-- **TypeScript** como versão tipada da lógica.
 - **Canvas API** para renderização do jogo.
 - **localStorage** para salvar o recorde sem banco de dados.
 
@@ -59,7 +63,7 @@ Opção recomendada:
 ## Estrutura de Pastas e Arquivos
 
 ```text
-GT-PROJETO-IA-SKILLS/
+gt-cobrinha/
 - index.html
 - style.css
 - script.js
@@ -70,5 +74,4 @@ GT-PROJETO-IA-SKILLS/
 ## Observações
 
 - O arquivo `script.js` é o que o navegador executa.
-- O arquivo `script.ts` representa a versão tipada da lógica.
 - O recorde permanece salvo no navegador até que o `localStorage` seja limpo.
