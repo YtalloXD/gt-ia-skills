@@ -73,7 +73,7 @@ gt-cobrinha/
 ```
 
 ## Screenshot do Jogo
-<img width="738" height="855" alt="image" src="https://github.com/user-attachments/assets/f54fc4c9-bff4-430b-bfd4-b2dd581e5e83" />
+<img width="538" height="555" alt="image" src="https://github.com/user-attachments/assets/f54fc4c9-bff4-430b-bfd4-b2dd581e5e83" />
 
 
 ## Observações
